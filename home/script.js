@@ -22,12 +22,18 @@
 /*JOGADOR*/
     // Criação do jogador e suas caracteristicas
     const player = {
+        //posições
         x: 100,
-        y: canvas.height * 0.8 -10,
+        y: canvas.height * 0.8,
+        //tamanho
         width: 100,
         height: 100,
-        speed: 5,
+        //atributos
+        speed: 10,
+        //movimentação
         vx: 0,
+        vy: 0,
+        //imagem
         image: new Image()
     }
     //Adiciona a imagem ao jogador
@@ -57,23 +63,37 @@
         function update(){
 
             player.vx = 0; //Velocidade do personagem no eixo x
+            player.vy = 0; //Velocidade do personagem no eixo y
 
             //Faz o personagem ir para frente
             if(keys["ArrowRight"] || keys["KeyD"]){
                 player.vx = player.speed;
             }
 
-            //Faz om personagem ir para trás
+            //Faz o personagem ir para trás
             if(keys["ArrowLeft"] || keys["KeyA"]){
                 player.vx = -player.speed;
             }
 
+            //Faz o personagem ir para cima
+            if(keys["Space"] || keys["ArrowUp"] || keys["KeyW"]){
+                player.vy = -player.speed * 2;
+            }
+
+            //Faz o personagem cair
+            if(keys["KeyS"] || keys["ArrowDown"]){
+                player.vy = player.speed * 2;
+            }
+
             //Movimenta o personagem
             player.x += player.vx;
+            player.y += player.vy;
 
             //Impede o personagem de sair da tela
             if(player.x < 0) player.x = 0; //Impede de sair pela esquerda
             if(player.x + player.width > canvas.width) player.x = canvas.width - player.width; //Impede de sair pela direitaa
+            if(player.y < 0) player.y = 0; //Impede de sair por cima
+            if(player.y > canvas.height * 0.8) player.y = canvas.height * 0.8; //Impede de cair
 
         }
 
