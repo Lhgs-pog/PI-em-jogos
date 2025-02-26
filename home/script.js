@@ -45,6 +45,9 @@
     //Lista de teclas que estão sendo presionadass
     const keys = {};
 
+    //Pulo e gravidade
+    let tempoPulo = 0;
+
     //Salva como verdadeira a tecla presionada
     document.addEventListener("keydown", (e) => {
         keys[e.code] = true;
@@ -62,8 +65,10 @@
         */
         function update(){
 
+            const gravidade = 0.5; //Velocidade da gravidade
+
             player.vx = 0; //Velocidade do personagem no eixo x
-            player.vy = 0; //Velocidade do personagem no eixo y
+            player.vy += gravidade; //Velocidade do personagem no eixo y
 
             //Faz o personagem ir para frente
             if(keys["ArrowRight"] || keys["KeyD"]){
@@ -76,14 +81,16 @@
             }
 
             //Faz o personagem ir para cima
-            if(keys["Space"] || keys["ArrowUp"] || keys["KeyW"]){
-                player.vy = -player.speed * 2;
+            if((keys["Space"] || keys["ArrowUp"] || keys["KeyW"]) && player.y == canvas.height * 0.8 ){
+                player.vy = -player.speed * 1.5;
+                tempoPulo = Date.now();
             }
 
-            //Faz o personagem cair
-            if(keys["KeyS"] || keys["ArrowDown"]){
-                player.vy = player.speed * 2;
+            //Verifica se faz mais que 0.3 segundos desde o pulo antes de cair
+            if(Date.now() - tempoPulo > 300){
+                player.vy = player.speed;
             }
+            //Faz o personagem cair
 
             //Movimenta o personagem
             player.x += player.vx;
