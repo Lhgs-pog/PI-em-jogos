@@ -46,14 +46,12 @@
         //Se tiver passado 0.1 segundos e o player ainda tiver pulos
         if(Date.now() - tempoPulo > 300 && player.pulos > 0){
             player.pulos -= 1;
-            console.log(`numero pulos ${player.pulos}`);
             return true;
         }
 
         //Primeiro pulo
         if (player.pulos == 2){
             player.pulos -= 1;
-            console.log('bbbbbbbbbbbbbbbbbbbb');
             return true;
         }
 
