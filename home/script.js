@@ -30,6 +30,7 @@
         height: 100,
         //atributos
         speed: 10,
+        pulos: 2,
         //movimentação
         vx: 0,
         vy: 0,
@@ -38,6 +39,27 @@
     }
     //Adiciona a imagem ao jogador
     player.image.src = "../poggers.webp";
+
+/*MECANICAS*/
+    //PULO DUPLO
+    function VerificarPulo(){
+        //Se tiver passado 0.1 segundos e o player ainda tiver pulos
+        if(Date.now() - tempoPulo > 300 && player.pulos > 0){
+            player.pulos -= 1;
+            console.log(`numero pulos ${player.pulos}`);
+            return true;
+        }
+
+        //Primeiro pulo
+        if (player.pulos == 2){
+            player.pulos -= 1;
+            console.log('bbbbbbbbbbbbbbbbbbbb');
+            return true;
+        }
+
+        //Sem pulos restantes
+        return false;
+    }
 
 
 
@@ -81,7 +103,7 @@
             }
 
             //Faz o personagem ir para cima
-            if((keys["Space"] || keys["ArrowUp"] || keys["KeyW"]) && player.y == canvas.height * 0.8 ){
+            if((keys["Space"] || keys["ArrowUp"] || keys["KeyW"]) && VerificarPulo()){
                 player.vy = -player.speed * 1.5;
                 tempoPulo = Date.now();
             }
@@ -90,6 +112,8 @@
             if(Date.now() - tempoPulo > 300){
                 player.vy = player.speed;
             }
+
+            if(player.y == canvas.height * 0.8 && player.pulos < 2) player.pulos++;
             //Faz o personagem cair
 
             //Movimenta o personagem
@@ -98,7 +122,7 @@
 
             //Impede o personagem de sair da tela
             if(player.x < 0) player.x = 0; //Impede de sair pela esquerda
-            if(player.x + player.width > canvas.width) player.x = canvas.width - player.width; //Impede de sair pela direitaa
+            if(player.x + player.width > canvas.width) player.x = canvas.width - player.width; //Impede de sair pela direita
             if(player.y < 0) player.y = 0; //Impede de sair por cima
             if(player.y > canvas.height * 0.8) player.y = canvas.height * 0.8; //Impede de cair
 
