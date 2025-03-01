@@ -33,56 +33,98 @@
         ctx.restore();
     }
 
+    /**
+     * Coloca as estruturas dentro da fase
+     */
     function drawEstructure(){
-
+        ctx.drawImage(plataforma.image, plataforma.x, plataforma.y, plataforma.width, plataforma.height);
     }
 
+    /**
+     * Coloca os inimigos dentro da fase
+     */
     function drawEnemy(){
-
+        ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
     }
 
+    /**
+     * Coloca os projeteis dentro da fase
+     */
     function drawProjectile(){
-        
+
     }
-
-
-/*JOGADOR*/
+    
+/*ATACKES*/
+       
+    
+/*ENTIDADES*/
+    /*JOGADOR*/
     // Criação do jogador e suas caracteristicas
-    const player = {
-        //tamanho
-        width: 50,
-        height: 50,
-        //posições
-        x: 100,
-        y: canvas.height - 50,
-        //atributos
-        speed: 10,
-        pulos: 2,
-        //Status
-        state: "ground",
-        looking: "left",
-        //movimentação
-        vx: 0,
-        vy: 0,
-        //imagem
-        image: new Image()
-    }
-    //Adiciona a imagem ao jogador
-    player.image.src = "../poggers.webp";
+        const player = {
+            //tamanho
+            width: 50,
+            height: 50,
+            //posições
+            x: 100,
+            y: canvas.height - 50,
+            //atributos
+            hp: 100,
+            speed: 10,
+            pulos: 2,
+            //Status
+            state: "ground",
+            looking: "left",
+            //movimentação
+            vx: 0,
+            vy: 0,
+            //imagem
+            image: new Image()
+        }
+        //Adiciona a imagem ao jogador
+        player.image.src = "../poggers.webp";
 
+
+        /*INIMIGOS*/
+        const enemy = {
+            //Tamanho
+            width: 50,
+            height: 50,
+            //Posições
+            x: canvas.width - 50,
+            y: canvas.height - 50,
+            //Atributos
+            hp: 100,
+            speed: 7,
+            pulos: 0,
+            //Status
+            state: "ground",
+            looking: "right",
+            //Movimentação
+            vx: 0,
+            vy: 0,
+            //Imagem
+            image: new Image()
+        };
+        enemy.image.src = "../not_poggers.jpg";
+        
 /*MAPA*/
     /*Plataformas*/
+    const plataformas = [];
+
         //plataforma1
         const plataforma = {
+            //Posição
             x: 100,
-            y: 100,
-            width: 150,
-            height: 100
-        }
+            y: canvas.height - 100,
+            //Tamanho
+            width: 300,
+            height: 25,
+            //Imagem
+            image: new Image()
+        };
+        plataforma.image.src = "../tijolo.jpg";
 
-        const plataformas = [
-            plataforma
-        ]
+    plataformas.push(plataforma);
 
     /**
      * Verifica se o player está emcima de alguma plataforma ou do chão
@@ -90,22 +132,29 @@
     function VerificarChao(){
 
         //Verifica se o player está no chão
-        if(player.y == canvas.height - player.height && player.pulos < 2){
+        if(player.y >= canvas.height - player.height && player.pulos < 2){
             player.pulos++;
             player.state = "ground";
         }
-
-        //Passa por cada plataforma dentro de plataformas
-        plataformas.forEach(plataforma => {
-            //Verifica se o player está emcima de uma plataforma
-            if( player.y == plataforma.y && plataforma.x <= player.x <= plataforma.x + plataforma.width){
-                player.pulos++;
-                player.state = "ground";
-                player.y = plataforma.height - player.height; //Impede ele de cair
-            }
-        });
         
-        player.state = "air";
+        //Simplificar a condição
+        const estaNaLargura = player.x + player.width > plataforma.x && player.x < plataforma.x + plataforma.width;
+        const estaNoTopo = player.y + player.height >= plataforma.y && player.y + player.height <= plataforma.y + 5; // Pequena margem de erro
+
+         //Passa por cada plataforma dentro de plataformas
+         plataformas.forEach(plataforma => {
+            //Verifica se o player está emcima de uma plataforma
+            if (estaNaLargura && estaNoTopo) {
+                player.pulos = 2;
+                player.state = "ground";
+                player.y = plataforma.y - player.height;
+                player.vy = 0;
+            }
+         });
+
+        //Muda o status do player
+        if(!player.state == "ground")player.state = "air";
+
         return
 
     }
@@ -113,7 +162,7 @@
 /*MECANICAS*/
     //PULO DUPLO
     function VerificarPulo(){
-        //Se tiver passado 0.1 segundos e o player ainda tiver pulos
+        //Se tiver passado 0.5 segundos e o player ainda tiver pulos
         if(Date.now() - tempoPulo > 300 && player.pulos > 0){
             player.pulos -= 1;
             return true;
@@ -191,11 +240,12 @@
 
             //Reseta os pulos e muda o status do player
             VerificarChao();
-
+            
             //Movimenta o personagem
             player.x += player.vx;
             player.y += player.vy;
 
+            
             //Impede o personagem de sair da tela
             if(player.x < 0) player.x = 0; //Impede de sair pela esquerda
             if(player.x + player.width > canvas.width) player.x = canvas.width - player.width; //Impede de sair pela direita
@@ -211,6 +261,9 @@
     function gameLoop(){
         update();
         draw();
+        drawEnemy();
+        drawEstructure();
+        drawProjectile();
         requestAnimationFrame(gameLoop);
     }
 
