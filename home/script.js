@@ -124,6 +124,7 @@
         };
         plataforma.image.src = "../tijolo.jpg";
 
+    //Adiciona as plataformas em plataformas
     plataformas.push(plataforma);
 
     /**
@@ -131,6 +132,7 @@
      */
     function VerificarChao(){
 
+        //Controle de status
         let nochao = false;
 
         //Verifica se o player está no chão
@@ -141,19 +143,27 @@
         }
         
         //Simplificar a condição
-        const estaNaLargura = player.x + player.width > plataforma.x && player.x < plataforma.x + plataforma.width;
-        const estaNoTopo = player.y + player.height >= plataforma.y && player.y + player.height <= plataforma.y + 10; // Pequena margem de erro
+        const estaNaLargura =
+        //Se ele está dentro da esquerda
+         player.x + player.width > plataforma.x &&
+         //Se ele está dentro da direita
+          player.x < plataforma.x + plataforma.width;
+
+
+        const estaNoTopo =
+        //Se está em cima da plataforma 
+        player.y + player.height >= plataforma.y && 
+        //Se passou um pouquinho do topo da plataforma
+        player.y + player.height <= plataforma.y + 10; // Pequena margem de erro e 10px
 
          //Passa por cada plataforma dentro de plataformas
          plataformas.forEach(plataforma => {
             //Verifica se o player está emcima de uma plataforma
-            console.log(`Largura: ${estaNaLargura} Altura: ${estaNoTopo} Velocidade: ${player.vy > 0} ${player.vy}`);
             if (estaNaLargura && estaNoTopo && player.vy >= 0) {
                 player.pulos = 2;
                 player.state = "ground";
                 player.y = plataforma.y - player.height;
                 player.vy = 0;
-                console.log("Passou");
                 nochao = true
             }
          });
