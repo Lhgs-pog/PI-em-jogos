@@ -131,29 +131,35 @@
      */
     function VerificarChao(){
 
+        let nochao = false;
+
         //Verifica se o player está no chão
         if(player.y >= canvas.height - player.height && player.pulos < 2){
-            player.pulos++;
+            player.pulos = 2;
             player.state = "ground";
+            nochao = true;
         }
         
         //Simplificar a condição
         const estaNaLargura = player.x + player.width > plataforma.x && player.x < plataforma.x + plataforma.width;
-        const estaNoTopo = player.y + player.height >= plataforma.y && player.y + player.height <= plataforma.y + 5; // Pequena margem de erro
+        const estaNoTopo = player.y + player.height >= plataforma.y && player.y + player.height <= plataforma.y + 10; // Pequena margem de erro
 
          //Passa por cada plataforma dentro de plataformas
          plataformas.forEach(plataforma => {
             //Verifica se o player está emcima de uma plataforma
-            if (estaNaLargura && estaNoTopo) {
+            console.log(`Largura: ${estaNaLargura} Altura: ${estaNoTopo} Velocidade: ${player.vy > 0} ${player.vy}`);
+            if (estaNaLargura && estaNoTopo && player.vy >= 0) {
                 player.pulos = 2;
                 player.state = "ground";
                 player.y = plataforma.y - player.height;
                 player.vy = 0;
+                console.log("Passou");
+                nochao = true
             }
          });
 
         //Muda o status do player
-        if(!player.state == "ground")player.state = "air";
+        if(nochao == false)player.state = "air";
 
         return
 
@@ -206,8 +212,14 @@
 
             const gravidade = 0.96; //Velocidade da gravidade
 
+            
             player.vx = 0; //Velocidade do personagem no eixo x
-            player.vy += gravidade; //Velocidade do personagem no eixo y
+
+            if(player.state === "air"){
+                player.vy += gravidade; //Aplica gravidade gradualmente
+            } else {
+                player.vy = 0;//Remove velocidade se o player estiver no chão
+            }
 
             //Faz o personagem ir para frente
             if(keys["ArrowRight"] || keys["KeyD"]){
@@ -234,7 +246,7 @@
             }
 
             //Verifica se faz mais que 0.3 segundos desde o pulo antes de cair
-            if(Date.now() - tempoPulo > 300){
+            if(Date.now() - tempoPulo > 300 && player.state === "air"){
                 player.vy = player.speed;
             }
 
