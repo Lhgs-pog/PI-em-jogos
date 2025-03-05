@@ -81,7 +81,7 @@
             image: new Image()
         }
         //Adiciona a imagem ao jogador
-        player.image.src = "../poggers.webp";
+        player.image.src = "imagens/poggers.webp";
 
 
         /*INIMIGOS*/
@@ -105,7 +105,7 @@
             //Imagem
             image: new Image()
         };
-        enemy.image.src = "../not_poggers.jpg";
+        enemy.image.src = "imagens/not_poggers.jpg";
         
 /*MAPA*/
     /*Plataformas*/
@@ -122,7 +122,7 @@
             //Imagem
             image: new Image()
         };
-        plataforma.image.src = "../tijolo.jpg";
+        plataforma.image.src = "imagens/tijolo.jpg";
 
     //Adiciona as plataformas em plataformas
     plataformas.push(plataforma);
