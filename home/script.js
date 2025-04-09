@@ -43,7 +43,13 @@
      * Coloca os inimigos dentro da fase
      */
     function drawEnemy(){
+        ctx.save()
+
+        if(enemy.tookDamage){
+            ctx.filter = "brightness(150%)"
+        }
         ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
+        ctx.restore()
     }
 
     /**
@@ -90,7 +96,7 @@
     }
     atackP.image.src="imagens/atackPlayer.png"
 
-    function platerAtack(){
+    function playerAtack(){
         //Impede de spawn de ataque
         if(Date.now() - tempoAtk < 500) return
         tempoAtk = Date.now()
@@ -106,8 +112,13 @@
 
         //Verifica colisão e diminui o hp do inimigo
         if(checarColisao(atackP, enemy)){
+            enemy.tookDamage = true
             enemy.hp -= atackP.damage
             if(enemy.hp <= 0) enemy.dead = true
+
+            setTimeout( () => {
+                enemy.tookDamage = false
+            }, 200)
         }
 
         //Permite o ataque ser precionado novamente
@@ -164,13 +175,14 @@
             x: canvas.width - 50,
             y: canvas.height - 50,
             //Atributos
-            hp: 100,
+            hp: 500,
             speed: 6,
             pulos: 0,
             //Status
             state: "ground",
             looking: "right",
             dead: false,
+            tookDamage: false,
             //Movimentação
             vx: 0,
             vy: 0,
@@ -434,7 +446,7 @@
             VerificarChao();
 
             if(keys["KeyF"]){
-                platerAtack()
+                playerAtack()
             }
             
             //Movimenta o personagem
@@ -459,11 +471,12 @@
     function gameLoop(){
         update();
         draw();
-        if (!enemy.hp <= 0){
+        if (enemy.hp >= 0){
            drawEnemy();
         } else if(!enemy.dead){
             enemy.dead = true
         }
+        console.log(enemy.hp)
         drawEstructure();
         drawProjectile();
         drawPlayerAtack();
