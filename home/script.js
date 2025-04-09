@@ -1,4 +1,3 @@
-
 /*TELA DE JOGO*/
     // Criação da tela e contexto
     const canvas = document.getElementById("tela-jogo");
@@ -53,9 +52,81 @@
     function drawProjectile(){
 
     }
+
+    function drawPlayerAtack(){
+
+        if(!atackP.active) return
+        
+         //Salva estado atual do contexto
+         ctx.save();
+
+         //Controla a direção que o player olha
+         if (player.looking === "right") {
+            ctx.drawImage(atackP.image, atackP.x, atackP.y, atackP.width, atackP.height);
+        } else {
+            // Desenha a imagem normalmente para a direita
+            ctx.drawImage(atackP.image, atackP.x, atackP.y, atackP.width, atackP.height);
+        }
+ 
+         //Retorna para o contexto salvo após fazer essass alterações
+         ctx.restore();
+    }
     
 /*ATACKES*/
-       
+    const atackP = {
+        //Atributos
+        damage: 100,
+        //Tamanho
+        height: 150,
+        width: 150,
+        //Posição
+        x: 0,
+        y: 0,
+        //Estado
+        active: false,
+        duration: 100,
+        //Imagem
+        image: new Image()
+    }
+    atackP.image.src="imagens/atackPlayer.png"
+
+    function platerAtack(){
+        //Impede de spawn de ataque
+        if(Date.now() - tempoAtk < 500) return
+        tempoAtk = Date.now()
+
+        //Determina a posição do atack
+        if(player.looking = "right"){
+            atackP.x = player.x + player.width
+        }else{
+            atackP.x = player.x - atackP.width
+        }
+        atackP.y = player.y + (player.height/2 - atackP.height/2)//Determina altura
+        atackP.active = true
+
+        //Verifica colisão e diminui o hp do inimigo
+        if(checarColisao(atackP, enemy)){
+            enemy.hp -= atackP.damage
+            if(enemy.hp <= 0) enemy.dead = true
+        }
+
+        //Permite o ataque ser precionado novamente
+        setTimeout( () => {
+            atackP.active = false
+        }, atackP.duration)
+    }
+
+    /**
+     * Verifica se o inimigo está dentro do ataque
+     */
+    function checarColisao(rect1, rect2){
+        return (
+            rect1.x < rect2.x + rect2.width && //Entre a esquerda
+            rect1.x + rect1.width > rect2.x && //Entre a direita
+            rect1.y < rect2.y + rect2.height &&
+            rect1.y + rect1.height > rect2.y 
+        );
+    }
     
 /*ENTIDADES*/
     /*JOGADOR*/
@@ -94,11 +165,12 @@
             y: canvas.height - 50,
             //Atributos
             hp: 100,
-            speed: 7,
+            speed: 6,
             pulos: 0,
             //Status
             state: "ground",
             looking: "right",
+            dead: false,
             //Movimentação
             vx: 0,
             vy: 0,
@@ -107,9 +179,51 @@
         };
         enemy.image.src = "imagens/not_poggers.jpg";
         
+/*INTELIGÊNCIA ARTIFICIAL*/
+    /*Movimentação*/
+    function AiMove(gravidade){
+
+        //Reset e gravidade
+        enemy.vx = 0
+        enemy.vy += gravidade
+
+        //Direita
+        if(player.x > enemy.x)
+            enemy.vx = enemy.speed
+
+        //Esquerda
+        if(player.x < enemy.x)
+            enemy.vx = -enemy.speed
+
+        //Pulo
+        if((player.y < enemy.y && enemy.y - player.y < enemy.height) && // Só entre umas altura específica
+        (enemy.x - player.x <= 30 || enemy.x - player.x <= -30) && //Pula só perto, problema
+        enemy.state == "ground") //Evita pulo infinito
+        {
+            enemy.vy = -enemy.speed * 2
+            enemy.state = "air"
+            console.log("atv")
+        }
+
+        //Alteração plano cartesiano
+        enemy.x += enemy.vx
+        enemy.y += enemy.vy
+
+        //Colisões
+        if(enemy.x < 0) enemy.x = 0; //Impede de sair pela esquerda
+        if(enemy.x + enemy.width > canvas.width) enemy.x = canvas.width - enemy.width; //Impede de sair pela direita
+        if(enemy.y < 0) enemy.y = 0; //Impede de sair por cima
+        if(enemy.y > canvas.height - enemy.height){
+            enemy.y = canvas.height - enemy.height
+            enemy.state = "ground"
+        } //Impede de cair
+
+        //console.log(`ex ${enemy.x}  ; ey ${enemy.y}  ; px ${player.x} ; py ${player.y}`)
+    }
+
 /*MAPA*/
 
-    function drawMApa(){
+    function drawMapa(){
 
         const tileW = 50
         const tileH = 50
@@ -257,6 +371,7 @@
 
     //Pulo e gravidade
     let tempoPulo = 0;
+    let tempoAtk = 0;
 
     //Salva como verdadeira a tecla presionada
     document.addEventListener("keydown", (e) => {
@@ -317,6 +432,10 @@
 
             //Reseta os pulos e muda o status do player
             VerificarChao();
+
+            if(keys["KeyF"]){
+                platerAtack()
+            }
             
             //Movimenta o personagem
             player.x += player.vx;
@@ -329,6 +448,8 @@
             if(player.y < 0) player.y = 0; //Impede de sair por cima
             if(player.y > canvas.height - player.height) player.y = canvas.height - player.height; //Impede de cair
 
+            AiMove(gravidade)
+
         }
 
 /*LOOP PRINCIPAL*/
@@ -338,9 +459,14 @@
     function gameLoop(){
         update();
         draw();
-        drawEnemy();
+        if (!enemy.hp <= 0){
+           drawEnemy();
+        } else if(!enemy.dead){
+            enemy.dead = true
+        }
         drawEstructure();
         drawProjectile();
+        drawPlayerAtack();
         requestAnimationFrame(gameLoop);
     }
 
