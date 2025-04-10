@@ -67,8 +67,10 @@
          ctx.save();
 
          //Controla a direção que o player olha
-         if (player.looking === "right") {
-            ctx.drawImage(atackP.image, atackP.x, atackP.y, atackP.width, atackP.height);
+         if (player.looking === "left") {
+            ctx.translate(atackP.x + atackP.width, atackP.y)
+            ctx.scale(-1,1)
+            ctx.drawImage(atackP.image, 0, 0, atackP.width, atackP.height);
         } else {
             // Desenha a imagem normalmente para a direita
             ctx.drawImage(atackP.image, atackP.x, atackP.y, atackP.width, atackP.height);
@@ -94,7 +96,7 @@
         //Imagem
         image: new Image()
     }
-    atackP.image.src="imagens/atackPlayer.png"
+    atackP.image.src="imagens/claw.png"
 
     function playerAtack(){
         //Impede de spawn de ataque
@@ -102,7 +104,7 @@
         tempoAtk = Date.now()
 
         //Determina a posição do atack
-        if(player.looking = "right"){
+        if(player.looking === "right"){
             atackP.x = player.x + player.width
         }else{
             atackP.x = player.x - atackP.width
