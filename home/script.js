@@ -39,26 +39,6 @@
         ctx.drawImage(plataforma.image, plataforma.x, plataforma.y, plataforma.width, plataforma.height);
     }
 
-    /**
-     * Coloca os inimigos dentro da fase
-     */
-    function drawEnemy(){
-        ctx.save()
-
-        if(enemy.tookDamage){
-            ctx.filter = "brightness(150%)"
-        }
-        ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
-        ctx.restore()
-    }
-
-    /**
-     * Coloca os projeteis dentro da fase
-     */
-    function drawProjectile(){
-
-    }
-
     function drawPlayerAtack(){
 
         if(!atackP.active) return
@@ -78,6 +58,18 @@
  
          //Retorna para o contexto salvo após fazer essass alterações
          ctx.restore();
+    }
+
+    let listaDeInimigos = [];
+
+    function criarNovoInimigo() {
+        const novoInimigo = new Enemy(300, 6, 0);
+        listaDeInimigos.push(novoInimigo);
+        console.log("inimigo criado")
+    }
+
+    function removerInimigosMortos() {
+        listaDeInimigos = listaDeInimigos.filter(inimigo => inimigo.hp > 0);
     }
     
 /*ATACKES*/
@@ -112,16 +104,18 @@
         atackP.y = player.y + (player.height/2 - atackP.height/2)//Determina altura
         atackP.active = true
 
-        //Verifica colisão e diminui o hp do inimigo
-        if(checarColisao(atackP, enemy)){
-            enemy.tookDamage = true
-            enemy.hp -= atackP.damage
-            if(enemy.hp <= 0) enemy.dead = true
+        //Verifica se cada ataque acertou os inimigos
+        for (const inimigo of listaDeInimigos) {
+        if (checarColisao(atackP, inimigo)) {
+            inimigo.tookDamage = true;
+            inimigo.hp -= atackP.damage;
 
-            setTimeout( () => {
-                enemy.tookDamage = false
-            }, 200)
+            // O timeout para o efeito de dano deve ser aplicado ao inimigo específico
+            setTimeout(() => {
+                inimigo.tookDamage = false;
+            }, 200);
         }
+    }
 
         //Permite o ataque ser precionado novamente
         setTimeout( () => {
@@ -169,126 +163,91 @@
 
 
         /*INIMIGOS*/
-        const enemy = {
-            //Tamanho
-            width: 50,
-            height: 50,
-            //Posições
-            x: canvas.width - 50,
-            y: canvas.height - 50,
-            //Atributos
-            hp: 500,
-            speed: 6,
-            pulos: 0,
-            //Status
-            state: "ground",
-            looking: "right",
-            dead: false,
-            tookDamage: false,
-            //Movimentação
-            vx: 0,
-            vy: 0,
-            //Imagem
-            image: new Image()
-        };
-        enemy.image.src = "imagens/not_poggers.jpg";
-        
-/*INTELIGÊNCIA ARTIFICIAL*/
-    /*Movimentação*/
-    function AiMove(gravidade){
+        class Enemy {
 
-        //Reset e gravidade
-        enemy.vx = 0
-        enemy.vy += gravidade
+            constructor(hp,speed,pulos){
+                //Tamanho
+                this.width=50
+                this.height=50
+                //Posição
+                this.x= canvas.width - 50
+                this.y= canvas.height - 50
+                //Atributos
+                this.hp=hp
+                this.speed=speed
+                this.pulos=pulos
+                //Status
+                this.state="ground"
+                this.looking="right"
+                this.dead=false
+                this.tookDamage=false
+                //Movimentação
+                this.vx=0
+                this.vy=0
+                //Aparência
+                this.image = new Image()
+                this.image.src = "imagens/not_poggers.jpg";
+            }
 
-        //Direita
-        if(player.x > enemy.x)
-            enemy.vx = enemy.speed
+            AiMove(){
+    
+                const gravidade = 0.96;
 
-        //Esquerda
-        if(player.x < enemy.x)
-            enemy.vx = -enemy.speed
+                //Reset e gravidade
+                this.vx = 0
+                this.vy += gravidade
+    
+                //Direita
+                if(player.x > this.x)
+                    this.vx = this.speed
+    
+                //Esquerda
+                if(player.x < this.x)
+                    this.vx = - this.speed
+    
+                //Pulo
+                if((player.y < this.y && this.y - player.y < this.height) && // Só entre umas altura específica
+                (this.x - player.x <= 30 || this.x - player.x <= -30) && //Pula só perto, problema
+                this.state == "ground") //Evita pulo infinito
+                {
+                    this.vy = - this.speed * 2
+                    this.state = "air"
+                    console.log("atv")
+                }
+    
+                //Alteração plano cartesiano
+                this.x += this.vx
+                this.y += this.vy
+    
+                //Colisões
+                if(this.x < 0) this.x = 0; //Impede de sair pela esquerda
+                if(this.x + this.width > canvas.width) this.x = canvas.width - this.width; //Impede de sair pela direita
+                if(this.y < 0) this.y = 0; //Impede de sair por cima
+                if(this.y > canvas.height - this.height){
+                    this.y = canvas.height - this.height
+                    this.state = "ground"
+                } //Impede de cair
+    
+            }
 
-        //Pulo
-        if((player.y < enemy.y && enemy.y - player.y < enemy.height) && // Só entre umas altura específica
-        (enemy.x - player.x <= 30 || enemy.x - player.x <= -30) && //Pula só perto, problema
-        enemy.state == "ground") //Evita pulo infinito
-        {
-            enemy.vy = -enemy.speed * 2
-            enemy.state = "air"
-            console.log("atv")
-        }
+            /**
+             * Coloca os inimigos dentro da fase
+             */
+            drawEnemy(){
+                ctx.save()
 
-        //Alteração plano cartesiano
-        enemy.x += enemy.vx
-        enemy.y += enemy.vy
+                if(this.tookDamage){
+                    ctx.filter = "brightness(150%)"
+                }
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                ctx.restore()
+            }
 
-        //Colisões
-        if(enemy.x < 0) enemy.x = 0; //Impede de sair pela esquerda
-        if(enemy.x + enemy.width > canvas.width) enemy.x = canvas.width - enemy.width; //Impede de sair pela direita
-        if(enemy.y < 0) enemy.y = 0; //Impede de sair por cima
-        if(enemy.y > canvas.height - enemy.height){
-            enemy.y = canvas.height - enemy.height
-            enemy.state = "ground"
-        } //Impede de cair
-
-        //console.log(`ex ${enemy.x}  ; ey ${enemy.y}  ; px ${player.x} ; py ${player.y}`)
-    }
+        }  
 
 /*MAPA*/
 
-    function drawMapa(){
-
-        const tileW = 50
-        const tileH = 50
-
-        const mapW = 500
-        const mapH = 500
-
-        var currentSeconds =0, frameCount =0, framesLastSeconds =0
-
-        var gameMap =[
-            0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-            0 , 1 , 1 , 1 , 1 , 1 , 1 , 1 , 0 ,
-            0 , 1 , 1 , 1 , 1 , 1 , 1 , 1 , 0 ,
-            0 , 1 , 0 , 0 , 0 , 1 , 1 , 1 , 0 ,
-            0 , 1 , 1 , 1 , 1 , 1 , 1 , 1 , 0 ,
-            0 , 1 , 1 , 1 , 1 , 1 , 1 , 0 , 0 ,
-            0 , 0 , 1 , 1 , 1 , 1 , 0 , 0 , 0 ,
-            0 , 0 , 0 , 1 , 1 , 1 , 1 , 1 , 0 ,
-            0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-        ]
-
-        var sec = Math.floor(Date.now / 1000) //Usado para manter o rastro do framerate
-
-        if(sec!=currentSeconds) {
-            currentSeconds = sec
-            framesLastSeconds = frameCount
-            frameCount = 1
-        } else {
-            frameCount++
-        }
-
-        for(var y; y < mapW; y++){
-
-            for(var x; x < mapH; x++){
-
-                switch(gameMap[((y*mapW) + x )]){
-                    case 0:
-                        ctx.fillStyle = "#999999"
-                        break;
-                    default:
-                        ctx.fillStyle = "#eeeeee"
-                }
-
-                ctx.fillRect(x*tileW, y*tileH, tileW, tileH)
-            }
-        }
-        ctx.fillStyle = "#ff0000"
-        ctx.fillText("FPS: " + framesLastSeconds, 10, 20)
-
-        requestAnimationFrame(drawMApa)
-    }
+    
 
 
     /*Plataformas*/
@@ -462,9 +421,9 @@
             if(player.y < 0) player.y = 0; //Impede de sair por cima
             if(player.y > canvas.height - player.height) player.y = canvas.height - player.height; //Impede de cair
 
-            AiMove(gravidade)
-
         }
+
+        setInterval(criarNovoInimigo, 5000);
 
 /*LOOP PRINCIPAL*/
     /**
@@ -472,18 +431,22 @@
      */
     function gameLoop(){
         update();
-        draw();
-        if (enemy.hp >= 0){
-           drawEnemy();
-        } else if(!enemy.dead){
-            enemy.dead = true
+        
+        //Pecorre todos os inimigos da lista
+        for (const enemy of listaDeInimigos) {
+            enemy.AiMove();
         }
-        console.log(enemy.hp)
+        
+        draw();
+        for (const enemy of listaDeInimigos) {
+            enemy.drawEnemy();
+        }
         drawEstructure();
-        drawProjectile();
         drawPlayerAtack();
+
+        removerInimigosMortos();
+
         requestAnimationFrame(gameLoop);
     }
-
 //Inicia o loop
 gameLoop();
