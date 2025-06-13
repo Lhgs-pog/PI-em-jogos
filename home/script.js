@@ -47,6 +47,30 @@
          ctx.restore();
     }
 
+    function drawPlayerHealthBar() {
+
+        ctx.save()
+        // Fundo da barra de vida (vermelho)
+        ctx.fillStyle = 'red';
+        ctx.fillRect(20, 20, 300, 30); // Posição x, y, Largura, Altura
+
+        // Barra de vida atual (verde)
+        const healthBarWidth = (player.hp / player.maxHp) * 300;
+        ctx.fillStyle = 'green';
+        ctx.fillRect(20, 20, healthBarWidth, 30);
+        
+        // Contorno da barra
+        ctx.strokeStyle = 'black';
+        ctx.strokeRect(20, 20, 300, 30);
+
+        // Texto da vida
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.fillText(`HP: ${player.hp} / 100`, 25, 43);
+
+        ctx.restore()
+    }
+
     let listaDeInimigos = [];
 
     function getRandomInt(min, max) {
@@ -65,17 +89,17 @@
             case 1: //ram
                 tipo = "ram"
                 hp = 100
-                speed = 10
+                speed = 5
                 break;
             case 2: //hd
                 tipo = "hd"
                 hp = 500
-                speed = 4
+                speed = 2
                 break;
             case 3: //fan
                 tipo = "fan"
                 hp = 300
-                speed = 6
+                speed = 3
                 break;
         }
         const novoInimigo = new Enemy({
@@ -98,8 +122,8 @@
         //Atributos
         damage: 100,
         //Tamanho
-        height: 150,
-        width: 150,
+        height: 100,
+        width: 100,
         //Posição
         x: 0,
         y: 0,
@@ -109,7 +133,7 @@
         //Imagem
         image: new Image()
     }
-    atackP.image.src="imagens/claw.png"
+    atackP.image.src="imagens/atack-espada.png"
 
     function playerAtack(){
         //Impede de spawn de ataque
@@ -438,6 +462,39 @@
                 this.framesCurrent = 0; // Reinicia a animação
             }
 
+            takeDamage() {
+                // Se o jogador estiver invencível, não faz nada
+                if (this.isInvincible) return;
+
+                // Reduz a vida
+                this.hp -= 10;
+                
+                // Garante que a vida não fique negativa
+                if (this.hp < 0) {
+                    this.hp = 0;
+                }
+
+                // Se a vida chegou a zero, fim de jogo
+                if (this.hp === 0) {
+                    this.handleDeath();
+                } else {
+                    // Ativa a invencibilidade
+                    this.isInvincible = true;
+                    // O jogador pisca ou muda de cor para mostrar que está invencível (opcional)
+                    
+                    // Desativa a invencibilidade após um tempo
+                    setTimeout(() => {
+                        this.isInvincible = false;
+                    }, this.invincibilityDuration);
+                }
+            }
+            
+            handleDeath() {
+                console.log("FIM DE JOGO");
+                isGameOver = true; // (vamos criar essa variável global)
+                showGameOverScreen();
+            }
+
         }
 
         /*INIMIGOS*/
@@ -573,6 +630,18 @@
     
     setInterval(criarNovoInimigo, 5000);
 
+    function showGameOverScreen() {
+        // Desenha um fundo preto semi-transparente
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Escreve a mensagem de Fim de Jogo
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('FIM DE JOGO', canvas.width / 2, canvas.height / 2);
+    }
+
 /*LOOP PRINCIPAL*/
 
     // Defina as animações para o player
@@ -607,11 +676,11 @@
 
     }
 
-
+    let isGameOver = false;
     let lastTime =0
     const player = new Player({
         hp: 100,
-        speed: 12,
+        speed: 10,
         pulos: 2,
         sprites: playerSprites
     })
@@ -620,6 +689,11 @@
      * Atualiza a tela e mantém o loop
      */
     function gameLoop(timeStamp){
+
+        if (isGameOver) {
+            showGameOverScreen();
+            return; 
+        }
 
         const deltaTime = timeStamp - lastTime
         lastTime = timeStamp
@@ -635,9 +709,13 @@
         player.update();
         for (const enemy of listaDeInimigos) {
             enemy.update(player);
+            if (checarColisao(player, enemy)) {
+                player.takeDamage(); 
+            }
         }
         drawEstructure();
         drawPlayerAtack();
+        drawPlayerHealthBar();
 
         removerInimigosMortos();
 
