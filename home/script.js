@@ -5,38 +5,25 @@
     canvas.width = window.innerWidth * 0.8;
     canvas.height = window.innerHeight * 0.8;
 
-    /**
-     * Limpa a tela antes de colocar o personagem na nova posição
-     */
-    function draw(){
-        //Limpa a tela
-        ctx.clearRect(0,0 , canvas.width, canvas.height);
 
-        //Salva estado atual do contexto
-        ctx.save();
-
-        //Controla a direção que o player olha
-        if (player.looking === "right") {
-            // Translada para a posição correta para desenhar a imagem invertida
-            ctx.translate(player.x + player.width, player.y);
-            // Inverte o eixo x
-            ctx.scale(-1, 1);
-            // Desenha a imagem a partir da origem (0,0)
-            ctx.drawImage(player.image, 0, 0, player.width, player.height);
-        } else {
-            // Desenha a imagem normalmente para a direita
-            ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
-        }
-
-        //Retorna para o contexto salvo após fazer essass alterações
-        ctx.restore();
+    function clear(){
+        ctx.clearRect(0,0, canvas.width, canvas.height)
     }
 
     /**
      * Coloca as estruturas dentro da fase
      */
     function drawEstructure(){
-        ctx.drawImage(plataforma.image, plataforma.x, plataforma.y, plataforma.width, plataforma.height);
+        ctx.save()
+        ctx.fillRect(plataforma.x, plataforma.y, plataforma.width, plataforma.height)
+        ctx.restore()
+    }
+
+    const fundo = new Image()
+    fundo.src = "imagens/fundo.jpeg"
+
+    function drawBackground(){
+        ctx.drawImage(fundo, 0, 0, canvas.width, canvas.height)
     }
 
     function drawPlayerAtack(){
@@ -62,8 +49,42 @@
 
     let listaDeInimigos = [];
 
+    function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+
     function criarNovoInimigo() {
-        const novoInimigo = new Enemy(300, 6, 0);
+
+        let number = getRandomInt(1,4)
+
+        let hp, speed, tipo;
+
+        switch(number){
+            case 1: //ram
+                tipo = "ram"
+                hp = 100
+                speed = 10
+                break;
+            case 2: //hd
+                tipo = "hd"
+                hp = 500
+                speed = 4
+                break;
+            case 3: //fan
+                tipo = "fan"
+                hp = 300
+                speed = 6
+                break;
+        }
+        const novoInimigo = new Enemy({
+            tipo: tipo,
+            hp: hp,
+            speed: speed,
+            pulos: 0,
+            sprites: enemySprites
+        });
         listaDeInimigos.push(novoInimigo);
         console.log("inimigo criado")
     }
@@ -136,42 +157,305 @@
     }
     
 /*ENTIDADES*/
+    /*SPRITE*/
+        class Sprite{
+            
+            constructor({ x, y, imageSrc, scale = 1, framesMax = 1, sprites }) {
+                this.x = x;
+                this.y = y;
+                this.scale = scale;
+                this.framesMax = framesMax;
+                this.sprites = sprites; // Objeto com todas as animações
+        
+                this.image = new Image();
+                this.image.src = imageSrc;
+        
+                // Propriedades internas de controle de animação
+                this.framesCurrent = 0; // O quadro atual da animação
+                this.framesElapsed = 0; // Quadros do jogo que se passaram
+                this.framesHold = 7;    // A cada quantos quadros do jogo a animação muda (velocidade)
+                this.width = 0;
+                this.height = 0;
+        
+                // Quando a imagem carregar, definimos a largura e altura do sprite
+                this.image.onload = () => {
+                    this.spriteWidth = this.image.width / this.framesMax;
+                    this.spriteHeight = this.image.height; 
+                    this.width = this.spriteWidth * this.scale;
+                    this.height = this.spriteHeight * this.scale;
+                };
+        
+                // Define a animação inicial
+                for (const sprite in this.sprites) {
+                    this.sprites[sprite].image = new Image();
+                    this.sprites[sprite].image.src = this.sprites[sprite].imageSrc;
+                }
+            }
+
+            // Método para desenhar o sprite na tela
+            draw() {
+                if (!this.image.complete) return; // Não desenha se a imagem não carregou
+
+                const sx = this.framesCurrent * this.spriteWidth;
+                // A linha Y é determinada pela animação atual, que define a imagem
+                // Não precisamos mais de frameY aqui porque cada animação tem sua própria imagem/spritesheet
+                const sy = 0;
+
+                ctx.drawImage(
+                    this.image,
+                    sx,
+                    sy,
+                    this.spriteWidth,
+                    this.spriteHeight,
+                    this.x,
+                    this.y,
+                    this.width,
+                    this.height
+                );
+            }
+
+            // Método para avançar os frames da animação
+            updateAnimation() {
+                this.framesElapsed++;
+
+                if (this.framesElapsed % this.framesHold === 0) {
+                    if (this.framesCurrent < this.framesMax - 1) {
+                        this.framesCurrent++;
+                    } else {
+                        this.framesCurrent = 0;
+                    }
+                }
+            }
+
+            update(){
+                this.draw()
+                this.updateAnimation()
+            }
+
+            
+        }
+
     /*JOGADOR*/
     // Criação do jogador e suas caracteristicas
-        const player = {
-            //tamanho
-            width: 50,
-            height: 50,
-            //posições
-            x: 100,
-            y: canvas.height - 50,
-            //atributos
-            hp: 100,
-            speed: 10,
-            pulos: 2,
-            //Status
-            state: "ground",
-            looking: "left",
-            //movimentação
-            vx: 0,
-            vy: 0,
-            //imagem
-            image: new Image()
-        }
-        //Adiciona a imagem ao jogador
-        player.image.src = "imagens/poggers.webp";
 
+        class Player extends Sprite{
+            
+            constructor({hp,speed,pulos, sprites}){
+
+                super({
+                    x: 100,
+                    y: canvas.height - 50,
+                    imageSrc: sprites.idle.imageSrc,
+                    scale: 1.0,
+                    framesMax: sprites.idle.framesMax,
+                    sprites
+                })
+
+                this.image.width=50
+                this.image.height=50
+
+                this.isInvincible = false
+                this.invincibilityDuration = 1500
+
+                this.hp=hp
+                this.speed=speed
+                this.pulos= pulos
+                this.state="ground"
+                this.looking="left"
+                this.vx = 0
+                this.vy - 0
+            }
+
+            playerAtack(){
+                //Impede de spawn de ataque
+                if(Date.now() - tempoAtk < 500) return
+                tempoAtk = Date.now()
+        
+                //Determina a posição do atack
+                if(this.looking === "right"){
+                    atackP.x = this.x + this.width
+                }else{
+                    atackP.x = this.x - atackP.width
+                }
+                atackP.y = this.y + (this.height/2 - atackP.height/2)//Determina altura
+                atackP.active = true
+        
+                //Verifica se cada ataque acertou os inimigos
+                for (const inimigo of listaDeInimigos) {
+                if (checarColisao(atackP, inimigo)) {
+                    inimigo.tookDamage = true;
+                    inimigo.hp -= atackP.damage;
+        
+                    // O timeout para o efeito de dano deve ser aplicado ao inimigo específico
+                    setTimeout(() => {
+                        inimigo.tookDamage = false;
+                    }, 200);
+                }
+            }
+        
+                //Permite o ataque ser precionado novamente
+                setTimeout( () => {
+                    atackP.active = false
+                }, atackP.duration)
+            }
+
+            VerificarChao(){
+
+                //Controle de status
+                let nochao = false;
+        
+                //Verifica se o player está no chão
+                if(this.y >= canvas.height - this.height && this.pulos < 2){
+                    this.pulos = 2;
+                    this.state = "ground";
+                    nochao = true;
+                }
+                
+                //Simplificar a condição
+                const estaNaLargura =
+                //Se ele está dentro da esquerda
+                this.x + this.width > plataforma.x &&
+                 //Se ele está dentro da direita
+                 this.x < plataforma.x + plataforma.width;
+        
+        
+                const estaNoTopo =
+                //Se está em cima da plataforma 
+                this.y + this.height >= plataforma.y && 
+                //Se passou um pouquinho do topo da plataforma
+                this.y + this.height <= plataforma.y + 10; // Pequena margem de erro e 10px
+        
+                 //Passa por cada plataforma dentro de plataformas
+                 plataformas.forEach(plataforma => {
+                    //Verifica se o player está emcima de uma plataforma
+                    if (estaNaLargura && estaNoTopo && this.vy >= 0) {
+                        this.pulos = 2;
+                        this.state = "ground";
+                        this.y = plataforma.y - this.height;
+                        this.vy = 0;
+                        nochao = true
+                    }
+                 });
+        
+                //Muda o status do player
+                if(nochao == false)this.state = "air";
+        
+                return
+        
+            }
+
+            VerificarPulo(){
+                //Se tiver passado 0.5 segundos e o player ainda tiver pulos
+                if(Date.now() - tempoPulo > 300 && this.pulos > 0){
+                    this.pulos -= 1;
+                    return true;
+                }
+        
+                //Primeiro pulo
+                if (this.pulos == 2){
+                    this.pulos -= 1;
+                    return true;
+                }
+        
+                //Sem pulos restantes
+                return false;
+            }
+
+            update(){
+                const gravidade = 0.96; //Velocidade da gravidade
+
+            
+                this.vx = 0; //Velocidade do personagem no eixo x
+
+                if(this.state === "air"){
+                    this.vy += gravidade; //Aplica gravidade gradualmente
+                } else {
+                    this.vy = 0;//Remove velocidade se o player estiver no chão
+                }
+
+                //Faz o personagem ir para frente
+                if(keys["ArrowRight"] || keys["KeyD"]){
+                    this.vx = this.speed;
+                    if(this.looking == "left"){
+                        this.looking = "right";
+                        
+                    }
+                }
+
+                //Faz o personagem ir para trás
+                if(keys["ArrowLeft"] || keys["KeyA"]){
+                    this.vx = -this.speed;
+                    if(this.looking == "right"){
+                        this.looking = "left";
+                    }
+                }
+
+                //Faz o personagem ir para cima
+                if((keys["Space"] || keys["ArrowUp"] || keys["KeyW"]) && this.VerificarPulo()){
+                    this.vy = -this.speed * 1.5;
+                    tempoPulo = Date.now();
+                    this.state = "air";
+                }
+
+                //Verifica se faz mais que 0.3 segundos desde o pulo antes de cair
+                if(Date.now() - tempoPulo > 300 && this.state === "air"){
+                    this.vy = this.speed;
+                }
+
+                //Reseta os pulos e muda o status do player
+                this.VerificarChao();
+
+                if(keys["KeyF"]){
+                    this.playerAtack()
+                }
+                
+                //Movimenta o personagem
+                this.x += this.vx;
+                this.y += this.vy;
+
+                
+                //Impede o personagem de sair da tela
+                if(this.x < 0) this.x = 0; //Impede de sair pela esquerda
+                if(this.x + this.width > canvas.width) this.x = canvas.width - this.width; //Impede de sair pela direita
+                if(this.y < 0) this.y = 0; //Impede de sair por cima
+                if(this.y > canvas.height - this.height) this.y = canvas.height - this.height; //Impede de cair
+                
+                if (this.vx !== 0) {
+                    this.switchSprite('run');
+                } else {
+                    this.switchSprite('idle');
+                }
+
+                super.update()
+
+            }
+
+            switchSprite(spriteName) {
+                if (this.image === this.sprites[spriteName].image) return; // Já está na animação correta
+        
+                this.image = this.sprites[spriteName].image;
+                this.framesMax = this.sprites[spriteName].framesMax;
+                this.framesCurrent = 0; // Reinicia a animação
+            }
+
+        }
 
         /*INIMIGOS*/
-        class Enemy {
+        class Enemy extends Sprite{
 
-            constructor(hp,speed,pulos){
-                //Tamanho
-                this.width=50
-                this.height=50
-                //Posição
-                this.x= canvas.width - 50
-                this.y= canvas.height - 50
+            constructor({tipo,hp,speed,pulos, sprites}){
+
+                super({
+                    x: canvas.width - 50,
+                    y: canvas.height - 50,
+                    imageSrc: sprites[tipo].imageSrc,
+                    scale: 1.0,
+                    framesMax: sprites[tipo].framesMax,
+                    sprites
+                });
+
+                //Tipo
+                this.tipo=tipo
                 //Atributos
                 this.hp=hp
                 this.speed=speed
@@ -184,9 +468,7 @@
                 //Movimentação
                 this.vx=0
                 this.vy=0
-                //Aparência
-                this.image = new Image()
-                this.image.src = "imagens/not_poggers.jpg";
+
             }
 
             AiMove(){
@@ -230,17 +512,17 @@
     
             }
 
-            /**
-             * Coloca os inimigos dentro da fase
-             */
-            drawEnemy(){
-                ctx.save()
-
-                if(this.tookDamage){
-                    ctx.filter = "brightness(150%)"
-                }
-                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-                ctx.restore()
+            update(player) {
+                this.AiMove(player);
+                super.update();
+            }
+        
+            // O método switchSprite pode ser copiado do Player ou colocado na classe Sprite base
+            switchSprite(spriteName) {
+                if (this.image === this.sprites[spriteName].image) return;
+                this.image = this.sprites[spriteName].image;
+                this.framesMax = this.sprites[spriteName].framesMax;
+                this.framesCurrent = 0;
             }
 
         }  
@@ -269,74 +551,6 @@
     //Adiciona as plataformas em plataformas
     plataformas.push(plataforma);
 
-    /**
-     * Verifica se o player está emcima de alguma plataforma ou do chão
-     */
-    function VerificarChao(){
-
-        //Controle de status
-        let nochao = false;
-
-        //Verifica se o player está no chão
-        if(player.y >= canvas.height - player.height && player.pulos < 2){
-            player.pulos = 2;
-            player.state = "ground";
-            nochao = true;
-        }
-        
-        //Simplificar a condição
-        const estaNaLargura =
-        //Se ele está dentro da esquerda
-         player.x + player.width > plataforma.x &&
-         //Se ele está dentro da direita
-          player.x < plataforma.x + plataforma.width;
-
-
-        const estaNoTopo =
-        //Se está em cima da plataforma 
-        player.y + player.height >= plataforma.y && 
-        //Se passou um pouquinho do topo da plataforma
-        player.y + player.height <= plataforma.y + 10; // Pequena margem de erro e 10px
-
-         //Passa por cada plataforma dentro de plataformas
-         plataformas.forEach(plataforma => {
-            //Verifica se o player está emcima de uma plataforma
-            if (estaNaLargura && estaNoTopo && player.vy >= 0) {
-                player.pulos = 2;
-                player.state = "ground";
-                player.y = plataforma.y - player.height;
-                player.vy = 0;
-                nochao = true
-            }
-         });
-
-        //Muda o status do player
-        if(nochao == false)player.state = "air";
-
-        return
-
-    }
-
-/*MECANICAS*/
-    //PULO DUPLO
-    function VerificarPulo(){
-        //Se tiver passado 0.5 segundos e o player ainda tiver pulos
-        if(Date.now() - tempoPulo > 300 && player.pulos > 0){
-            player.pulos -= 1;
-            return true;
-        }
-
-        //Primeiro pulo
-        if (player.pulos == 2){
-            player.pulos -= 1;
-            return true;
-        }
-
-        //Sem pulos restantes
-        return false;
-    }
-
-
 
 /*CONTROLE DE EVENTOS*/
     //Lista de teclas que estão sendo presionadass
@@ -356,90 +570,71 @@
         keys[e.code] = false;
     });
 
-    /* Movimentação */
-
-        /*
-        * Atualiza a posiçõa do usuário de acordo com as teclas presionadas
-        */
-        function update(){
-
-            const gravidade = 0.96; //Velocidade da gravidade
-
-            
-            player.vx = 0; //Velocidade do personagem no eixo x
-
-            if(player.state === "air"){
-                player.vy += gravidade; //Aplica gravidade gradualmente
-            } else {
-                player.vy = 0;//Remove velocidade se o player estiver no chão
-            }
-
-            //Faz o personagem ir para frente
-            if(keys["ArrowRight"] || keys["KeyD"]){
-                player.vx = player.speed;
-                if(player.looking == "left"){
-                    player.looking = "right";
-                    
-                }
-            }
-
-            //Faz o personagem ir para trás
-            if(keys["ArrowLeft"] || keys["KeyA"]){
-                player.vx = -player.speed;
-                if(player.looking == "right"){
-                    player.looking = "left";
-                }
-            }
-
-            //Faz o personagem ir para cima
-            if((keys["Space"] || keys["ArrowUp"] || keys["KeyW"]) && VerificarPulo()){
-                player.vy = -player.speed * 1.5;
-                tempoPulo = Date.now();
-                player.state = "air";
-            }
-
-            //Verifica se faz mais que 0.3 segundos desde o pulo antes de cair
-            if(Date.now() - tempoPulo > 300 && player.state === "air"){
-                player.vy = player.speed;
-            }
-
-            //Reseta os pulos e muda o status do player
-            VerificarChao();
-
-            if(keys["KeyF"]){
-                playerAtack()
-            }
-            
-            //Movimenta o personagem
-            player.x += player.vx;
-            player.y += player.vy;
-
-            
-            //Impede o personagem de sair da tela
-            if(player.x < 0) player.x = 0; //Impede de sair pela esquerda
-            if(player.x + player.width > canvas.width) player.x = canvas.width - player.width; //Impede de sair pela direita
-            if(player.y < 0) player.y = 0; //Impede de sair por cima
-            if(player.y > canvas.height - player.height) player.y = canvas.height - player.height; //Impede de cair
-
-        }
-
-        setInterval(criarNovoInimigo, 5000);
+    
+    setInterval(criarNovoInimigo, 5000);
 
 /*LOOP PRINCIPAL*/
+
+    // Defina as animações para o player
+    const playerSprites = {
+        idle: {
+            imageSrc: 'imagens/theo.png',
+            framesMax: 6
+        },
+        run: {
+            imageSrc: 'imagens/theo.png',
+            framesMax: 6
+        },
+        jump: {
+            imageSrc: 'imagens/poggers.webp',
+            framesMax: 1
+        }
+    };
+
+    const enemySprites = {
+        hd: {
+            imageSrc: 'imagens/hd.jpeg',
+            framesMax: 6,
+        },
+        ram: {
+            imageSrc: 'imagens/ram.jpeg',
+            framesMax: 12,
+        },
+        fan: {
+            imageSrc: 'imagens/fan.jpeg',
+            framesMax: 7,
+        },
+
+    }
+
+
+    let lastTime =0
+    const player = new Player({
+        hp: 100,
+        speed: 12,
+        pulos: 2,
+        sprites: playerSprites
+    })
+
     /**
      * Atualiza a tela e mantém o loop
      */
-    function gameLoop(){
-        update();
+    function gameLoop(timeStamp){
+
+        const deltaTime = timeStamp - lastTime
+        lastTime = timeStamp
+
+        clear()
         
         //Pecorre todos os inimigos da lista
         for (const enemy of listaDeInimigos) {
             enemy.AiMove();
         }
         
-        draw();
+        drawBackground()
+        player.update();
         for (const enemy of listaDeInimigos) {
-            enemy.drawEnemy();
+            enemy.update(player);
         }
         drawEstructure();
         drawPlayerAtack();
@@ -448,5 +643,9 @@
 
         requestAnimationFrame(gameLoop);
     }
+
+console.log(`Altura: ${canvas.height}`)
+console.log(`Largura: ${canvas.width}`)
+
 //Inicia o loop
 gameLoop();
